@@ -1,0 +1,102 @@
+-- Script Lua pour explorer une map Minecraft via la seed avec Love2D
+
+local seedInput = ""
+local infoText = "Entrez une seed et cliquez sur 'Analyser' pour voir les infos."
+
+-- Fonction pour calculer un hash basique basé sur la seed
+local function hash(seed)
+    return (seed * 0x5DEECE66D + 0xB) & ((1 << 48) - 1)
+end
+
+-- Fonction pour obtenir un biome basé sur les coordonnées
+local function getBiome(seed, x, z)
+    local h = hash(seed + x * 31 + z * 17)
+    local biomes = {"Plaine", "Désert", "Forêt", "Jungle", "Marais", "Montagne"}
+    return biomes[(h % #biomes) + 1]
+end
+
+-- Fonction principale pour afficher les informations de la carte
+local function getMapInfo(seed)
+    local output = "Informations pour la seed : " .. seed .. "\n"
+    local spawnX, spawnZ = 0, 0  -- coordonnées de spawn par défaut
+
+    -- Récupération des biomes autour du spawn
+    output = output .. "Biomes près du spawn :\n"
+    for x = -1, 1 do
+        for z = -1, 1 do
+            local biome = getBiome(seed, spawnX + x * 100, spawnZ + z * 100)
+            output = output .. "Biome en ("..(spawnX + x * 100)..", "..(spawnZ + z * 100)..") : "..biome .. "\n"
+        end
+    end
+
+    -- Ajout d'autres informations aléatoires
+    output = output .. "Distance moyenne entre villages : ~500 blocs\n"
+    output = output .. "Probabilité de temple dans le désert : 25%\n"
+
+    -- Simule la présence d'un temple
+    if seed % 2 == 0 then
+        output = output .. "Temple trouvé près du spawn\n"
+    else
+        output = output .. "Pas de temple trouvé près du spawn\n"
+    end
+
+    return output
+end
+
+-- Configuration Love2D
+function love.load()
+    love.window.setTitle("Explorateur de map Minecraft")
+    love.window.setMode(400, 300)
+    font = love.graphics.newFont(12)
+    love.graphics.setFont(font)
+end
+
+-- Fonction pour capturer l'entrée de la seed
+function love.textinput(text)
+    seedInput = seedInput .. text
+end
+
+function love.keypressed(key)
+    if key == "backspace" then
+        seedInput = seedInput:sub(1, -2)
+    elseif key == "return" then
+        local seed = tonumber(seedInput)
+        if seed then
+            infoText = getMapInfo(seed)
+        else
+            infoText = "Veuillez entrer une seed valide (nombre entier)."
+        end
+        seedInput = ""
+    end
+end
+
+-- Dessiner l'interface
+function love.draw()
+    love.graphics.clear(0.2, 0.2, 0.2)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print("Entrez la seed de la map Minecraft :", 10, 10)
+    love.graphics.rectangle("line", 10, 30, 380, 25)
+    love.graphics.print(seedInput, 15, 35)
+
+    -- Bouton Analyser
+    love.graphics.rectangle("fill", 150, 70, 100, 30)
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.print("Analyser", 170, 75)
+
+    -- Affichage des informations de la carte
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf(infoText, 10, 120, 380)
+end
+
+-- Gérer le clic sur le bouton Analyser
+function love.mousepressed(x, y, button)
+    if button == 1 and x >= 150 and x <= 250 and y >= 70 and y <= 100 then
+        local seed = tonumber(seedInput)
+        if seed then
+            infoText = getMapInfo(seed)
+        else
+            infoText = "Veuillez entrer une seed valide (nombre entier)."
+        end
+        seedInput = ""
+    end
+end
